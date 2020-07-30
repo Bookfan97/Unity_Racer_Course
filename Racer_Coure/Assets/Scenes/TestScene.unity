@@ -507,6 +507,7 @@ MonoBehaviour:
   maxSpeed: 30
   forwardAcceleration: 8000
   reverseAcceleration: 4000
+  turnStrength: 180
 --- !u!1001 &969953682
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -775,7 +776,7 @@ Rigidbody:
   m_AngularDrag: 4
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 2
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!135 &1115063201
