@@ -5,12 +5,23 @@ using UnityEngine;
 public class CarController : MonoBehaviour
 {
     public Rigidbody theRB;
-    public float maxSpeed, forwardAcceleration = 8f, reverseAcceleration = 4f, turnStrength = 180f;
-    private float speedInput, turnInput;
+
+    public float maxSpeed,
+        forwardAcceleration = 8f,
+        reverseAcceleration = 4f,
+        turnStrength = 180f,
+        groundRayLength = 0.75f,
+        gravityMod = 10f,
+        maxWheelTurn = 20f;
+    private float speedInput, turnInput, dragOnGround, dragInAir = 0.1f;
+    public bool grounded;
+    public Transform groundRayPoint, groundRayPoint2, leftFrontWheel, rightFrontWheel, leftBackWheel, rightBackWheel;
+    public LayerMask whatIsGround;
     // Start is called before the first frame update
     void Start()
     {
         theRB.transform.parent = null;
+        dragOnGround = theRB.drag;
     }
 
     // Update is called once per frame
@@ -27,16 +38,48 @@ public class CarController : MonoBehaviour
         }
 
         turnInput = Input.GetAxis("Horizontal");
-        if (Input.GetAxis("Vertical") != 0)
+        if (grounded && Input.GetAxis("Vertical") != 0)
         {
             transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength  * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude/maxSpeed), 0f));
         }
+        leftFrontWheel.localRotation = Quaternion.Euler(leftFrontWheel.localRotation.eulerAngles.x, (turnInput * maxWheelTurn) - 180, leftFrontWheel.localRotation.eulerAngles.z);
+        rightFrontWheel.localRotation = Quaternion.Euler(rightFrontWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightFrontWheel.localRotation.eulerAngles.z);        
+        leftBackWheel.localRotation = Quaternion.Euler(leftBackWheel.localRotation.eulerAngles.x, (turnInput * maxWheelTurn) - 180, leftBackWheel.localRotation.eulerAngles.z);
+        rightBackWheel.localRotation = Quaternion.Euler(rightBackWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightBackWheel.localRotation.eulerAngles.z);
         transform.position = theRB.position;
     }
 
     private void FixedUpdate()
     {
-        theRB.AddForce(transform.forward * speedInput * 1000f);
+        grounded = false;
+        RaycastHit hit;
+        Vector3 normalTarget = Vector3.zero;
+        if (Physics.Raycast(groundRayPoint.position, -transform.up, out hit, groundRayLength, whatIsGround))
+        {
+            grounded = true;
+            normalTarget = hit.normal;
+        }
+
+        if (Physics.Raycast(groundRayPoint2.position, -transform.up, out hit, groundRayLength, whatIsGround))
+        {
+            grounded = true;
+            normalTarget = (normalTarget+ hit.normal) / 2f;
+        }
+        
+        if (grounded)
+        {
+            transform.rotation = Quaternion.FromToRotation(transform.up, normalTarget) * transform.rotation;
+        }
+        if (grounded)
+        {
+            theRB.drag = dragOnGround;
+            theRB.AddForce(transform.forward * (speedInput * 1000f)); 
+        }
+        else
+        {
+            theRB.drag = dragInAir;
+            theRB.AddForce(-Vector3.up * (gravityMod * 100f));
+        }
         if (theRB.velocity.magnitude > maxSpeed)
         {
             theRB.velocity = theRB.velocity.normalized * maxSpeed;
