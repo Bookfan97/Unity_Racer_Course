@@ -12,16 +12,20 @@ public class CarController : MonoBehaviour
         turnStrength = 180f,
         groundRayLength = 0.75f,
         gravityMod = 10f,
-        maxWheelTurn = 20f;
-    private float speedInput, turnInput, dragOnGround, dragInAir = 0.1f;
+        maxWheelTurn = 20f,
+        maxEmission = 25f,
+        emissionFadeSpeed = 20f;
+    private float speedInput, turnInput, dragOnGround, dragInAir = 0.1f, emissionRate;
     public bool grounded;
     public Transform groundRayPoint, groundRayPoint2, leftFrontWheel, rightFrontWheel, leftBackWheel, rightBackWheel;
     public LayerMask whatIsGround;
+    public ParticleSystem[] dustTrail;
     // Start is called before the first frame update
     void Start()
     {
         theRB.transform.parent = null;
         dragOnGround = theRB.drag;
+        emissionRate = 25f;
     }
 
     // Update is called once per frame
@@ -47,6 +51,21 @@ public class CarController : MonoBehaviour
         leftBackWheel.localRotation = Quaternion.Euler(leftBackWheel.localRotation.eulerAngles.x, (turnInput * maxWheelTurn) - 180, leftBackWheel.localRotation.eulerAngles.z);
         rightBackWheel.localRotation = Quaternion.Euler(rightBackWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightBackWheel.localRotation.eulerAngles.z);
         transform.position = theRB.position;
+        emissionRate = Mathf.MoveTowards(emissionRate, 0f, emissionFadeSpeed * Time.deltaTime);
+        if (grounded && (Mathf.Abs(turnInput) > 0.5f || (theRB.velocity.magnitude < maxSpeed * 0.5f && theRB.velocity.magnitude !=0)))
+        {
+            emissionRate = maxEmission;
+        }
+
+        if (theRB.velocity.magnitude <= 0.5f)
+        {
+            emissionRate = 0;
+        }
+        for (int i = 0; i < dustTrail.Length; i++)
+        {
+            var emissionModule = dustTrail[i].emission;
+            emissionModule.rateOverTime = emissionRate;
+        }
     }
 
     private void FixedUpdate()
