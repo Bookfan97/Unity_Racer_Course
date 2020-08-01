@@ -42,15 +42,15 @@ public class CarController : MonoBehaviour
         }
 
         turnInput = Input.GetAxis("Horizontal");
-        if (grounded && Input.GetAxis("Vertical") != 0)
+        /*if (grounded && Input.GetAxis("Vertical") != 0)
         {
             transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength  * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude/maxSpeed), 0f));
-        }
+        }*/
         leftFrontWheel.localRotation = Quaternion.Euler(leftFrontWheel.localRotation.eulerAngles.x, (turnInput * maxWheelTurn) - 180, leftFrontWheel.localRotation.eulerAngles.z);
-        rightFrontWheel.localRotation = Quaternion.Euler(rightFrontWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightFrontWheel.localRotation.eulerAngles.z);        
         leftBackWheel.localRotation = Quaternion.Euler(leftBackWheel.localRotation.eulerAngles.x, (turnInput * maxWheelTurn) - 180, leftBackWheel.localRotation.eulerAngles.z);
+        rightFrontWheel.localRotation = Quaternion.Euler(rightFrontWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightFrontWheel.localRotation.eulerAngles.z);
         rightBackWheel.localRotation = Quaternion.Euler(rightBackWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightBackWheel.localRotation.eulerAngles.z);
-        transform.position = theRB.position;
+        //transform.position = theRB.position;
         emissionRate = Mathf.MoveTowards(emissionRate, 0f, emissionFadeSpeed * Time.deltaTime);
         if (grounded && (Mathf.Abs(turnInput) > 0.5f || (theRB.velocity.magnitude < maxSpeed * 0.5f && theRB.velocity.magnitude !=0)))
         {
@@ -103,6 +103,11 @@ public class CarController : MonoBehaviour
         {
             theRB.velocity = theRB.velocity.normalized * maxSpeed;
         }
-        Debug.Log(theRB.velocity.magnitude);
+        //Debug.Log(theRB.velocity.magnitude);
+        transform.position = theRB.position;
+        if (grounded && Input.GetAxis("Vertical") != 0) 
+        {
+            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength  * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude/maxSpeed), 0f)); 
+        }
     }
 }
