@@ -14,12 +14,14 @@ public class CarController : MonoBehaviour
         gravityMod = 10f,
         maxWheelTurn = 20f,
         maxEmission = 25f,
-        emissionFadeSpeed = 20f;
+        emissionFadeSpeed = 20f, 
+        skidFadeSpeed = 2f;
     private float speedInput, turnInput, dragOnGround, dragInAir = 0.1f, emissionRate;
     public bool grounded;
     public Transform groundRayPoint, groundRayPoint2, leftFrontWheel, rightFrontWheel, leftBackWheel, rightBackWheel;
     public LayerMask whatIsGround;
     public ParticleSystem[] dustTrail;
+    public AudioSource engineSound, skidSound;
     // Start is called before the first frame update
     void Start()
     {
@@ -65,6 +67,23 @@ public class CarController : MonoBehaviour
         {
             var emissionModule = dustTrail[i].emission;
             emissionModule.rateOverTime = emissionRate;
+        }
+
+        if (engineSound != null)
+        {
+            engineSound.pitch = 1f + ((theRB.velocity.magnitude/maxSpeed) * 2f);
+        }
+
+        if (skidSound != null)
+        {
+            if (Mathf.Abs(turnInput) > 0.5f)
+            {
+                skidSound.volume = 1f;
+            }
+            else
+            {
+                skidSound.volume = Mathf.MoveTowards(skidSound.volume, 0f, skidFadeSpeed * Time.deltaTime);
+            }
         }
     }
 
