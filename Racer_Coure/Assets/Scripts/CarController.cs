@@ -14,7 +14,8 @@ public class CarController : MonoBehaviour
         maxWheelTurn = 20f,
         maxEmission = 25f,
         emissionFadeSpeed = 20f, 
-        skidFadeSpeed = 2f;
+        skidFadeSpeed = 2f,
+        lapTime, bestLapTime;
     private float speedInput, turnInput, dragOnGround, dragInAir = 0.1f, emissionRate;
     public bool grounded;
     public Transform groundRayPoint, groundRayPoint2, leftFrontWheel, rightFrontWheel, leftBackWheel, rightBackWheel;
@@ -23,17 +24,22 @@ public class CarController : MonoBehaviour
     public AudioSource engineSound, skidSound;
     private int nextCheckpoint;
     public int currentLap;
+
     // Start is called before the first frame update
     void Start()
-    {
+    { 
         theRB.transform.parent = null;
         dragOnGround = theRB.drag;
-        emissionRate = 25f;
+       // emissionRate = 25f;
+        UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
     }
 
     // Update is called once per frame
     void Update()
     {
+        lapTime += Time.deltaTime;
+        var ts = System.TimeSpan.FromSeconds(lapTime);
+        UIManager.instance.currentTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
         speedInput = 0;
         if (Input.GetAxis("Vertical") > 0)
         {
@@ -140,8 +146,21 @@ public class CarController : MonoBehaviour
             if (nextCheckpoint == RaceManager.instance.Checkpoints.Length)
             {
                 nextCheckpoint = 0;
-                currentLap++;
+                LapCompleted();
             }
         }
+    }
+
+    public void LapCompleted()
+    {
+        currentLap++;
+        if (lapTime < bestLapTime || bestLapTime == 0)
+        {
+            bestLapTime = lapTime;
+        }
+        lapTime = 0;
+        var ts = System.TimeSpan.FromSeconds(bestLapTime);
+        UIManager.instance.bestTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
+        UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
     }
 }
