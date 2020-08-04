@@ -5,68 +5,129 @@ using UnityEngine;
 public class CarController : MonoBehaviour
 {
     public Rigidbody theRB;
+
     public float maxSpeed,
-        forwardAcceleration = 8f,
-        reverseAcceleration = 4f,
-        turnStrength = 180f,
-        groundRayLength = 0.75f,
-        gravityMod = 10f,
-        maxWheelTurn = 20f,
-        maxEmission = 25f,
-        emissionFadeSpeed = 20f, 
-        skidFadeSpeed = 2f,
-        lapTime, bestLapTime;
-    private float speedInput, turnInput, dragOnGround, dragInAir = 0.1f, emissionRate;
-    public bool grounded;
+         forwardAcceleration = 8f,
+         reverseAcceleration = 4f,
+         turnStrength = 180f,
+         groundRayLength = 0.75f,
+         gravityMod = 10f,
+         maxWheelTurn = 25f,
+         maxEmission = 25f,
+         emissionFadeSpeed = 20f,
+         skidFadeSpeed = 2f,
+         lapTime, bestLapTime,
+         resetCooldown = 2f,
+         aiAccelerateSpeed = 1f,
+         aiTurnSpeed = .8f,
+         aiReachPointRange = 5f,
+         aiPointVariance = 3f,
+         aiMaxTurn = 15f;
+    private float speedInput, turnInput, dragOnGround, dragInAir = 0.1f, emissionRate, aiSpeedInput, aiSpeedMod;
+    private bool grounded;
     public Transform groundRayPoint, groundRayPoint2, leftFrontWheel, rightFrontWheel, leftBackWheel, rightBackWheel;
     public LayerMask whatIsGround;
     public ParticleSystem[] dustTrail;
     public AudioSource engineSound, skidSound;
-    private int nextCheckpoint;
-    public int currentLap;
+    public int nextCheckpoint, currentLap, currentTarget;
+    private float resetCounter;
+    public bool isAI;
+    private Vector3 targetPoint;
 
     // Start is called before the first frame update
-    void Start()
-    { 
+    private void Start()
+    {
         theRB.transform.parent = null;
         dragOnGround = theRB.drag;
-       // emissionRate = 25f;
+        if (isAI)
+        {
+            targetPoint = RaceManager.instance.Checkpoints[currentTarget].transform.position;
+            RandomiseAITarget();
+
+            aiSpeedMod = Random.Range(.8f, 1.1f);
+        }
         UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
+        resetCounter = resetCooldown;
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
+        //if (!RaceManager.instance.isStarting)
+        //{
         lapTime += Time.deltaTime;
-        var ts = System.TimeSpan.FromSeconds(lapTime);
-        UIManager.instance.currentTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
-        speedInput = 0;
-        if (Input.GetAxis("Vertical") > 0)
+        if (!isAI)
         {
-            speedInput = Input.GetAxis("Vertical") * forwardAcceleration;
+            var ts = System.TimeSpan.FromSeconds(lapTime);
+            UIManager.instance.currentTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
+            speedInput = 0f;
+            if (Input.GetAxis("Vertical") > 0)
+            {
+                speedInput = Input.GetAxis("Vertical") * forwardAcceleration;
+            }
+            else if (Input.GetAxis("Vertical") < 0)
+            {
+                speedInput = Input.GetAxis("Vertical") * reverseAcceleration;
+            }
+
+            turnInput = Input.GetAxis("Horizontal");
+
+            /* if(grounded && Input.GetAxis("Vertical") != 0)
+            {
+                transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude / maxSpeed), 0f));
+            } */
+            if (resetCounter > 0)
+            {
+                resetCounter -= Time.deltaTime;
+            }
         }
-        else if(Input.GetAxis("Vertical") < 0)
+        else
         {
-            speedInput = Input.GetAxis("Vertical") * reverseAcceleration;
+            targetPoint.y = transform.position.y;
+
+            if (Vector3.Distance(transform.position, targetPoint) < aiReachPointRange)
+            {
+                SetNextAITarget();
+            }
+
+            Vector3 targetDir = targetPoint - transform.position;
+            float angle = Vector3.Angle(targetDir, transform.forward);
+
+            Vector3 localPos = transform.InverseTransformPoint(targetPoint);
+            if (localPos.x < 0f)
+            {
+                angle = -angle;
+            }
+
+            turnInput = Mathf.Clamp(angle / aiMaxTurn, -1f, 1f);
+
+            if (Mathf.Abs(angle) < aiMaxTurn)
+            {
+                aiSpeedInput = Mathf.MoveTowards(aiSpeedInput, 1f, aiAccelerateSpeed);
+            }
+            else
+            {
+                aiSpeedInput = Mathf.MoveTowards(aiSpeedInput, aiTurnSpeed, aiAccelerateSpeed);
+            }
+
+            speedInput = aiSpeedInput * forwardAcceleration * aiSpeedMod;
         }
 
-        turnInput = Input.GetAxis("Horizontal");
-        /*if (grounded && Input.GetAxis("Vertical") != 0)
-        {
-            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength  * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude/maxSpeed), 0f));
-        }*/
+        //turning the wheels
         leftFrontWheel.localRotation = Quaternion.Euler(leftFrontWheel.localRotation.eulerAngles.x, (turnInput * maxWheelTurn) - 180, leftFrontWheel.localRotation.eulerAngles.z);
         leftBackWheel.localRotation = Quaternion.Euler(leftBackWheel.localRotation.eulerAngles.x, (turnInput * maxWheelTurn) - 180, leftBackWheel.localRotation.eulerAngles.z);
         rightFrontWheel.localRotation = Quaternion.Euler(rightFrontWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightFrontWheel.localRotation.eulerAngles.z);
         rightBackWheel.localRotation = Quaternion.Euler(rightBackWheel.eulerAngles.x, (turnInput * maxWheelTurn), rightBackWheel.localRotation.eulerAngles.z);
         //transform.position = theRB.position;
+
+        //control particle emissions
         emissionRate = Mathf.MoveTowards(emissionRate, 0f, emissionFadeSpeed * Time.deltaTime);
-        if (grounded && (Mathf.Abs(turnInput) > 0.5f || (theRB.velocity.magnitude < maxSpeed * 0.5f && theRB.velocity.magnitude !=0)))
+        if (grounded && (Mathf.Abs(turnInput) > .5f || (theRB.velocity.magnitude < maxSpeed * .5f && theRB.velocity.magnitude != 0)))
         {
             emissionRate = maxEmission;
         }
 
-        if (theRB.velocity.magnitude <= 0.5f)
+        if (theRB.velocity.magnitude <= .5f)
         {
             emissionRate = 0;
         }
@@ -78,7 +139,7 @@ public class CarController : MonoBehaviour
 
         if (engineSound != null)
         {
-            engineSound.pitch = 1f + ((theRB.velocity.magnitude/maxSpeed) * 2f);
+            engineSound.pitch = 1f + ((theRB.velocity.magnitude / maxSpeed) * 2f);
         }
 
         if (skidSound != null)
@@ -108,9 +169,9 @@ public class CarController : MonoBehaviour
         if (Physics.Raycast(groundRayPoint2.position, -transform.up, out hit, groundRayLength, whatIsGround))
         {
             grounded = true;
-            normalTarget = (normalTarget+ hit.normal) / 2f;
+            normalTarget = (normalTarget + hit.normal) / 2f;
         }
-        
+
         if (grounded)
         {
             transform.rotation = Quaternion.FromToRotation(transform.up, normalTarget) * transform.rotation;
@@ -118,22 +179,25 @@ public class CarController : MonoBehaviour
         if (grounded)
         {
             theRB.drag = dragOnGround;
-            theRB.AddForce(transform.forward * (speedInput * 1000f)); 
+            theRB.AddForce(transform.forward * speedInput * 1000f);
         }
         else
         {
-            theRB.drag = dragInAir;
-            theRB.AddForce(-Vector3.up * (gravityMod * 100f));
+            theRB.drag = .1f;
+            theRB.AddForce(-Vector3.up * gravityMod * 100f);
         }
+
         if (theRB.velocity.magnitude > maxSpeed)
         {
             theRB.velocity = theRB.velocity.normalized * maxSpeed;
         }
+
         //Debug.Log(theRB.velocity.magnitude);
+
         transform.position = theRB.position;
-        if (grounded && Input.GetAxis("Vertical") != 0) 
+        if (grounded && speedInput != 0)
         {
-            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength  * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude/maxSpeed), 0f)); 
+            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude / maxSpeed), 0f));
         }
     }
 
@@ -149,6 +213,25 @@ public class CarController : MonoBehaviour
                 LapCompleted();
             }
         }
+        if (isAI)
+        {
+            if (checkpointNumber == currentTarget)
+            {
+                SetNextAITarget();
+            }
+        }
+    }
+
+    public void SetNextAITarget()
+    {
+        currentTarget++;
+        if (currentTarget >= RaceManager.instance.Checkpoints.Length)
+        {
+            currentTarget = 0;
+        }
+
+        targetPoint = RaceManager.instance.Checkpoints[currentTarget].transform.position;
+        RandomiseAITarget();
     }
 
     public void LapCompleted()
@@ -158,9 +241,57 @@ public class CarController : MonoBehaviour
         {
             bestLapTime = lapTime;
         }
-        lapTime = 0;
-        var ts = System.TimeSpan.FromSeconds(bestLapTime);
-        UIManager.instance.bestTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
-        UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
+
+        if (currentLap <= RaceManager.instance.totalLaps)
+        {
+            lapTime = 0f;
+
+            if (!isAI)
+            {
+                var ts = System.TimeSpan.FromSeconds(bestLapTime);
+                UIManager.instance.bestTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
+                UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
+            }
+        }
+        else
+        {
+            if (!isAI)
+            {
+                isAI = true;
+                aiSpeedMod = 1f;
+                targetPoint = RaceManager.instance.Checkpoints[currentTarget].transform.position;
+                RandomiseAITarget();
+                var ts = System.TimeSpan.FromSeconds(bestLapTime);
+                UIManager.instance.bestTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);               // RaceManager.instance.FinishRace();
+            }
+        }
+    }
+
+    public void RandomiseAITarget()
+    {
+        targetPoint += new Vector3(Random.Range(-aiPointVariance, aiPointVariance), 0f, Random.Range(-aiPointVariance, aiPointVariance));
+    }
+
+    private void ResetToTrack()
+    {
+        int pointToGoTo = nextCheckpoint - 1;
+        if (pointToGoTo < 0)
+        {
+            pointToGoTo = RaceManager.instance.Checkpoints.Length - 1;
+        }
+        transform.position = RaceManager.instance.Checkpoints[pointToGoTo].transform.position;
+        theRB.transform.position = transform.position;
+        theRB.velocity = Vector3.zero;
+        speedInput = 0f;
+        turnInput = 0f;
+        resetCounter = resetCooldown;
+    }
+
+    //this is just used for recording footage :)
+    public void SwitchToAI()
+    {
+        aiSpeedMod = 1f;
+        targetPoint = RaceManager.instance.Checkpoints[currentTarget].transform.position;
+        RandomiseAITarget();
     }
 }
