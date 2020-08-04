@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class RaceManager : MonoBehaviour
 {
@@ -11,8 +12,10 @@ public class RaceManager : MonoBehaviour
     public List<CarController> AICars = new List<CarController>();
     public float timeBetweenPositionCheck = 0.2f, AIDefaultSpeed = 30f, playerDefaultSpeed = 30f, rubberBandSpeedMod = 3.5f, rubberBandAcceleration = 0.5f, timeBetweenStartCount = 1f;
     private float positionCheckCounter, startCounter;
-    public bool isStarting;
+    public bool isStarting, raceCompleted;
     public Transform[] startPoints;
+    public List<CarController> carsToSpawn = new List<CarController>();
+    public string RaceCompleteScene;
     private void Awake()
     {
         instance = this;
@@ -28,6 +31,21 @@ public class RaceManager : MonoBehaviour
         isStarting = true;
         startCounter = timeBetweenStartCount;
         UIManager.instance.countdownText.text = countdownCurrent.ToString();
+        playerStartPosition = Random.Range(0, numAIToSpawn + 1);
+        playerCar.transform.position = startPoints[playerStartPosition].position;
+        playerCar.theRB.transform.position = startPoints[playerStartPosition].position;
+        for (int i = 0; i < carsToSpawn.Count + 1; i++)
+        {
+            if (i != playerStartPosition)
+            {
+                int selectedCar = Random.Range(0, carsToSpawn.Count);
+                AICars.Add(Instantiate(carsToSpawn[selectedCar], startPoints[i].position, startPoints[i].rotation));
+                if (carsToSpawn.Count >= numAIToSpawn)
+                {
+                    carsToSpawn.RemoveAt(selectedCar);
+                }
+            }
+        }
     }
 
     // Update is called once per frame
@@ -108,5 +126,33 @@ public class RaceManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void FinishRace()
+    {
+        raceCompleted = true;
+        string place;
+        switch (playerPosition)
+        {
+            case 1:
+                place = "1st";
+                break;
+            case 2:
+                place = "2nd";
+                break;
+            case 3:
+                place = "3rd";
+                break;
+            default:
+                place = playerPosition + "th";
+                break;
+        }
+        UIManager.instance.raceResultText.text = "You Finished " + place;
+        UIManager.instance.resultScreen.SetActive(true);
+    }
+
+    public void ExitRace()
+    {
+        SceneManager.LoadScene(RaceCompleteScene);
     }
 }

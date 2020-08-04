@@ -16,7 +16,7 @@ public class CarController : MonoBehaviour
          maxEmission = 25f,
          emissionFadeSpeed = 20f,
          skidFadeSpeed = 2f,
-         lapTime, bestLapTime,
+         lapTime, bestLapTime, totalTime,
          resetCooldown = 2f,
          aiAccelerateSpeed = 1f,
          aiTurnSpeed = .8f,
@@ -243,6 +243,7 @@ public class CarController : MonoBehaviour
             bestLapTime = lapTime;
         }
 
+        totalTime += lapTime;
         if (currentLap <= RaceManager.instance.totalLaps)
         {
             lapTime = 0f;
@@ -251,7 +252,14 @@ public class CarController : MonoBehaviour
             {
                 var ts = System.TimeSpan.FromSeconds(bestLapTime);
                 UIManager.instance.bestTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
-                UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
+                if (currentLap == RaceManager.instance.totalLaps)
+                {
+                    UIManager.instance.lapCounterText.text = "FINAL LAP";
+                }
+                else
+                {
+                    UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;    
+                }
             }
         }
         else
@@ -263,7 +271,10 @@ public class CarController : MonoBehaviour
                 targetPoint = RaceManager.instance.Checkpoints[currentTarget].transform.position;
                 RandomiseAITarget();
                 var ts = System.TimeSpan.FromSeconds(bestLapTime);
-                UIManager.instance.bestTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);               // RaceManager.instance.FinishRace();
+                UIManager.instance.bestTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", ts.Minutes, ts.Seconds, ts.Milliseconds);
+                var tt = System.TimeSpan.FromSeconds(totalTime);
+                UIManager.instance.totalTimeText.text = string.Format("{0:00}:{1:00}.{2:000}", tt.Minutes, tt.Seconds, tt.Milliseconds);               
+                RaceManager.instance.FinishRace();
             }
         }
     }
