@@ -46,15 +46,16 @@ public class CarController : MonoBehaviour
 
             aiSpeedMod = Random.Range(.8f, 1.1f);
         }
-        UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
+        //UIManager.instance.lapCounterText.text = currentLap + "/" + RaceManager.instance.totalLaps;
+        //UIManager.instance.lapCounterText.text = currentLap.ToString() + "/" + RaceManager.instance.totalLaps.ToString();
         resetCounter = resetCooldown;
     }
 
     // Update is called once per frame
     private void Update()
     {
-        //if (!RaceManager.instance.isStarting)
-        //{
+        if (!RaceManager.instance.isStarting)
+        {
         lapTime += Time.deltaTime;
         if (!isAI)
         {
@@ -69,13 +70,12 @@ public class CarController : MonoBehaviour
             {
                 speedInput = Input.GetAxis("Vertical") * reverseAcceleration;
             }
-
-            turnInput = Input.GetAxis("Horizontal");
-
-            /* if(grounded && Input.GetAxis("Vertical") != 0)
+            if (Input.GetKeyDown(KeyCode.R) && resetCooldown <= 0 )
             {
-                transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles + new Vector3(0f, turnInput * turnStrength * Time.deltaTime * Mathf.Sign(speedInput) * (theRB.velocity.magnitude / maxSpeed), 0f));
-            } */
+                ResetToTrack();
+            }
+            resetCooldown -= Time.deltaTime;
+            turnInput = Input.GetAxis("Horizontal");
             if (resetCounter > 0)
             {
                 resetCounter -= Time.deltaTime;
@@ -152,6 +152,7 @@ public class CarController : MonoBehaviour
             {
                 skidSound.volume = Mathf.MoveTowards(skidSound.volume, 0f, skidFadeSpeed * Time.deltaTime);
             }
+        }
         }
     }
 

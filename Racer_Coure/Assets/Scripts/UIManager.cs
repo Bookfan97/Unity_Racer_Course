@@ -6,7 +6,7 @@ using UnityEngine;
 public class UIManager : MonoBehaviour
 {
     public static UIManager instance;
-    public TMP_Text lapCounterText, bestTimeText, currentTimeText;
+    public TMP_Text lapCounterText, bestTimeText, currentTimeText, positionText, countdownText, GOText;
     // Start is called before the first frame update
     void Start()
     {
