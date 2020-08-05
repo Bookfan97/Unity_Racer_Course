@@ -16,14 +16,17 @@ public class RaceManager : MonoBehaviour
     public Transform[] startPoints;
     public List<CarController> carsToSpawn = new List<CarController>();
     public string RaceCompleteScene;
+
     private void Awake()
     {
         instance = this;
     }
 
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
+        totalLaps = RaceInfoManager.instance.noOfLaps;
+        numAIToSpawn = RaceInfoManager.instance.noOfAI;
         for (int i = 0; i < Checkpoints.Length; i++)
         {
             Checkpoints[i].checkpointNumber = i;
@@ -32,24 +35,31 @@ public class RaceManager : MonoBehaviour
         startCounter = timeBetweenStartCount;
         UIManager.instance.countdownText.text = countdownCurrent.ToString();
         playerStartPosition = Random.Range(0, numAIToSpawn + 1);
-        playerCar.transform.position = startPoints[playerStartPosition].position;
-        playerCar.theRB.transform.position = startPoints[playerStartPosition].position;
-        for (int i = 0; i < carsToSpawn.Count + 1; i++)
+        playerCar = Instantiate(RaceInfoManager.instance.racerToUse, startPoints[playerStartPosition].position, startPoints[playerStartPosition].rotation);
+        playerCar.isAI = false;
+        playerCar.GetComponent<AudioListener>().enabled = true;
+        CameraSwitcher.instance.SetTarget(playerCar);
+
+        //playerCar.transform.position = startPoints[playerStartPosition].position;
+        //playerCar.theRB.transform.position = startPoints[playerStartPosition].position;
+
+        for (int i = 0; i < numAIToSpawn + 1; i++)
         {
             if (i != playerStartPosition)
             {
                 int selectedCar = Random.Range(0, carsToSpawn.Count);
                 AICars.Add(Instantiate(carsToSpawn[selectedCar], startPoints[i].position, startPoints[i].rotation));
-                if (carsToSpawn.Count >= numAIToSpawn)
+                if (carsToSpawn.Count > numAIToSpawn - i)
                 {
                     carsToSpawn.RemoveAt(selectedCar);
                 }
             }
         }
+        UIManager.instance.positionText.text = (playerStartPosition + 1) + "/" + (AICars.Count + 1);
     }
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
         if (isStarting)
         {
@@ -73,7 +83,8 @@ public class RaceManager : MonoBehaviour
             if (positionCheckCounter <= 0)
             {
                 playerPosition = 1;
-                foreach (var AICar in AICars)
+
+                foreach (CarController AICar in AICars)
                 {
                     if (AICar.currentLap > playerCar.currentLap)
                     {
@@ -89,8 +100,8 @@ public class RaceManager : MonoBehaviour
                         {
                             if (Vector3.Distance(AICar.transform.position,
                                 Checkpoints[AICar.nextCheckpoint].transform.position) < Vector3.Distance(
-                                playerCar.transform.position,
-                                Checkpoints[playerCar.nextCheckpoint].transform.position))
+                                    playerCar.transform.position,
+                                    Checkpoints[AICar.nextCheckpoint].transform.position))
                             {
                                 playerPosition++;
                             }
@@ -104,26 +115,24 @@ public class RaceManager : MonoBehaviour
 
             if (playerPosition == 1)
             {
-                foreach (var AICar in AICars)
+                foreach (CarController AICar in AICars)
                 {
-                    AICar.maxSpeed = Mathf.MoveTowards(playerCar.maxSpeed, AIDefaultSpeed + rubberBandSpeedMod,
+                    AICar.maxSpeed = Mathf.MoveTowards(AICar.maxSpeed, AIDefaultSpeed + rubberBandSpeedMod,
                         rubberBandAcceleration * Time.deltaTime);
                 }
 
                 playerCar.maxSpeed = Mathf.MoveTowards(playerCar.maxSpeed, playerDefaultSpeed - rubberBandSpeedMod,
                     rubberBandAcceleration * Time.deltaTime);
             }
-            else if (playerPosition >= AICars.Count / 2)
+            else
             {
-                playerCar.maxSpeed = Mathf.MoveTowards(playerCar.maxSpeed,
-                    AIDefaultSpeed + (rubberBandSpeedMod * ((float) playerPosition / (AICars.Count + 1))),
-                    rubberBandAcceleration * Time.deltaTime);
-                foreach (var AICar in AICars)
+                foreach (CarController AICar in AICars)
                 {
-                    AICar.maxSpeed = Mathf.MoveTowards(playerCar.maxSpeed,
-                        AIDefaultSpeed - (rubberBandSpeedMod * ((float) playerPosition / (AICars.Count + 1))),
+                    AICar.maxSpeed = Mathf.MoveTowards(AICar.maxSpeed,
+                        AIDefaultSpeed - (rubberBandSpeedMod * ((float)playerPosition / ((float)AICars.Count + 1))),
                         rubberBandAcceleration * Time.deltaTime);
                 }
+                playerCar.maxSpeed = Mathf.MoveTowards(playerCar.maxSpeed, playerDefaultSpeed + (rubberBandSpeedMod * ((float)playerPosition / ((float)AICars.Count + 1))), rubberBandAcceleration * Time.deltaTime);
             }
         }
     }
@@ -137,12 +146,15 @@ public class RaceManager : MonoBehaviour
             case 1:
                 place = "1st";
                 break;
+
             case 2:
                 place = "2nd";
                 break;
+
             case 3:
                 place = "3rd";
                 break;
+
             default:
                 place = playerPosition + "th";
                 break;
