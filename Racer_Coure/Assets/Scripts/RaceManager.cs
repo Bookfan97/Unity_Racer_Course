@@ -25,8 +25,8 @@ public class RaceManager : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        totalLaps = RaceInfoManager.instance.noOfLaps;
-        numAIToSpawn = RaceInfoManager.instance.noOfAI;
+        totalLaps = RaceInfoManager.instance.numLaps;
+        numAIToSpawn = RaceInfoManager.instance.numAI;
         for (int i = 0; i < Checkpoints.Length; i++)
         {
             Checkpoints[i].checkpointNumber = i;
@@ -145,6 +145,14 @@ public class RaceManager : MonoBehaviour
         {
             case 1:
                 place = "1st";
+                if (RaceInfoManager.instance.trackToUnlock != "")
+                {
+                    if (!PlayerPrefs.HasKey(RaceInfoManager.instance.trackToUnlock + "_unlocked"))
+                    {
+                        PlayerPrefs.SetInt(RaceInfoManager.instance.trackToUnlock + "_unlocked", 1);
+                        UIManager.instance.trackUnlockedMessage.SetActive(true);
+                    }
+                }
                 break;
 
             case 2:

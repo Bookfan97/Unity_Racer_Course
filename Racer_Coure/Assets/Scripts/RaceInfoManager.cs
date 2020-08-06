@@ -8,12 +8,10 @@ public class RaceInfoManager : MonoBehaviour
 
     public string trackToLoad;
     public CarController racerToUse;
-    public int noOfAI;
-    public int noOfLaps;
-
+    public int numAI;
+    public int numLaps;
     public bool enteredRace;
     public Sprite trackSprite, racerSprite;
-
     public string trackToUnlock;
 
     private void Awake()
@@ -21,7 +19,6 @@ public class RaceInfoManager : MonoBehaviour
         if (instance == null)
         {
             instance = this;
-
             DontDestroyOnLoad(gameObject);
         } else
         {
